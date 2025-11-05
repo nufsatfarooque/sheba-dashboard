@@ -2,7 +2,8 @@
 
 A React-based dashboard for customer churn prediction and retention management with AI-powered SHAP explainability.
 
-![Dashboard Preview](https://via.placeholder.com/800x400/4F46E5/FFFFFF?text=Sheba+Retention+AI+Dashboard)
+![alt text](<Screenshot 2025-11-05 131454.png>)
+![alt text](image.png)
 
 ---
 
