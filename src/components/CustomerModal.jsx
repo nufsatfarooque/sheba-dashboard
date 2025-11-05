@@ -8,6 +8,8 @@ const CustomerModal = ({ customer, onClose }) => {
   const [churnDetails, setChurnDetails] = useState(null);
   const [intervention, setIntervention] = useState(null);
   const [error, setError] = useState(null);
+  const [executing, setExecuting] = useState(false);
+  const [executed, setExecuted] = useState(false);
 
   useEffect(() => {
     if (customer) {
@@ -20,23 +22,56 @@ const CustomerModal = ({ customer, onClose }) => {
       setLoading(true);
       setError(null);
 
-      // 🔌 PLACEHOLDER: Fetch detailed churn prediction with SHAP values
+      // Fetch detailed churn prediction with SHAP values
       const churnData = await apiService.getCustomerChurnPrediction(
         customer.customer_id
       );
 
-      // 🔌 PLACEHOLDER: Fetch intervention recommendation
+      // Fetch intervention recommendation using the rules engine
       const interventionData = await apiService.getInterventionRecommendation(
-        customer.customer_id
+        customer.customer_id,
+        customer // Pass customer data to use rules engine
       );
 
       setChurnDetails(churnData);
       setIntervention(interventionData);
+
+      // Check if intervention already executed
+      const history = await apiService.getInterventionHistory(customer.customer_id);
+      if (history && history.length > 0) {
+        setExecuted(true);
+      }
     } catch (err) {
       setError('Failed to load customer details. Please try again.');
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTakeAction = async () => {
+    if (!intervention || executing) return;
+
+    try {
+      setExecuting(true);
+      setError(null);
+
+      // Execute the intervention
+      const result = await apiService.executeIntervention(
+        customer.customer_id,
+        intervention
+      );
+
+      console.log('Intervention executed:', result);
+      setExecuted(true);
+
+      // Show success message
+      alert(`✅ Intervention sent successfully!\n\nAction: ${intervention.recommendation.action}\nMessage: ${intervention.recommendation.message_template}`);
+    } catch (err) {
+      setError('Failed to execute intervention. Please try again.');
+      console.error(err);
+    } finally {
+      setExecuting(false);
     }
   };
 
@@ -104,19 +139,65 @@ const CustomerModal = ({ customer, onClose }) => {
 
               {/* Recommended Intervention */}
               {intervention && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold mb-3 text-green-900">
-                    Recommended Action
-                  </h3>
+                <div className={`border rounded-lg p-6 ${
+                  intervention.recommendation.action === 'no_action'
+                    ? 'bg-gray-50 border-gray-200'
+                    : 'bg-green-50 border-green-200'
+                }`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className={`text-lg font-semibold ${
+                      intervention.recommendation.action === 'no_action'
+                        ? 'text-gray-900'
+                        : 'text-green-900'
+                    }`}>
+                      {intervention.recommendation.action === 'no_action'
+                        ? 'No Action Needed'
+                        : 'Recommended Action'}
+                    </h3>
+                    {executed && (
+                      <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
+                        Already Sent
+                      </span>
+                    )}
+                  </div>
                   <div className="space-y-3">
-                    <div>
-                      <p className="text-sm text-gray-700">
-                        <strong>Action:</strong> {intervention.recommendation.action}
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        <strong>Discount:</strong> Tk{' '}
-                        {intervention.recommendation.discount_amount}
-                      </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-sm text-gray-600">Action Type</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {intervention.recommendation.action.replace('_', ' ').toUpperCase()}
+                        </p>
+                      </div>
+                      {intervention.recommendation.discount_amount > 0 && (
+                        <div>
+                          <p className="text-sm text-gray-600">Discount Amount</p>
+                          <p className="text-sm font-semibold text-gray-900">
+                            Tk {intervention.recommendation.discount_amount}
+                          </p>
+                        </div>
+                      )}
+                      {intervention.recommendation.discount_code && (
+                        <div>
+                          <p className="text-sm text-gray-600">Discount Code</p>
+                          <p className="text-sm font-mono font-semibold text-blue-600">
+                            {intervention.recommendation.discount_code}
+                          </p>
+                        </div>
+                      )}
+                      {intervention.recommendation.priority && (
+                        <div>
+                          <p className="text-sm text-gray-600">Priority</p>
+                          <p className={`text-sm font-semibold uppercase ${
+                            intervention.recommendation.priority === 'high'
+                              ? 'text-red-600'
+                              : intervention.recommendation.priority === 'medium'
+                              ? 'text-yellow-600'
+                              : 'text-gray-600'
+                          }`}>
+                            {intervention.recommendation.priority}
+                          </p>
+                        </div>
+                      )}
                     </div>
                     <div className="bg-white rounded p-3">
                       <p className="text-sm font-medium text-gray-900 mb-1">
@@ -126,6 +207,16 @@ const CustomerModal = ({ customer, onClose }) => {
                         {intervention.recommendation.message_template}
                       </p>
                     </div>
+                    {intervention.recommendation.sms_template && (
+                      <div className="bg-white rounded p-3">
+                        <p className="text-sm font-medium text-gray-900 mb-1">
+                          SMS Template:
+                        </p>
+                        <p className="text-xs text-gray-700 font-mono">
+                          {intervention.recommendation.sms_template}
+                        </p>
+                      </div>
+                    )}
                     <div className="grid grid-cols-3 gap-3 text-sm">
                       <div>
                         <p className="text-gray-600">Expected Retention</p>
@@ -142,7 +233,7 @@ const CustomerModal = ({ customer, onClose }) => {
                       <div>
                         <p className="text-gray-600">Expected ROI</p>
                         <p className="font-semibold text-green-600">
-                          {intervention.recommendation.expected_roi.toFixed(0)}%
+                          {intervention.recommendation.expected_roi.toFixed(1)}%
                         </p>
                       </div>
                     </div>
@@ -161,9 +252,30 @@ const CustomerModal = ({ customer, onClose }) => {
           >
             Close
           </button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            Take Action
-          </button>
+          {intervention && intervention.recommendation.action !== 'no_action' && (
+            <button
+              onClick={handleTakeAction}
+              disabled={executing || executed}
+              className={`px-4 py-2 rounded-lg font-semibold ${
+                executed
+                  ? 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                  : executing
+                  ? 'bg-blue-400 text-white cursor-wait'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {executing ? (
+                <span className="flex items-center gap-2">
+                  <Loader className="animate-spin" size={16} />
+                  Sending...
+                </span>
+              ) : executed ? (
+                'Action Sent'
+              ) : (
+                'Take Action'
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>

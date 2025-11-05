@@ -5,6 +5,7 @@ import {
   mockChurnPrediction,
   mockIntervention
 } from './mockData';
+import { generateInterventionRecommendation } from './interventionEngine';
 
 // 🔌 PLACEHOLDER: Backend API base URL
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
@@ -95,9 +96,17 @@ export const apiService = {
   },
 
   // 5. POST /interventions/recommend
-  getInterventionRecommendation: async (customerId) => {
+  getInterventionRecommendation: async (customerId, customerData = null) => {
     if (USE_MOCK_DATA) {
-      console.log('🔧 Using mock intervention for:', customerId);
+      console.log('🔧 Using intervention engine for:', customerId);
+
+      // If customer data provided, use the rules engine
+      if (customerData) {
+        const recommendation = generateInterventionRecommendation(customerData);
+        return mockDelay(recommendation);
+      }
+
+      // Otherwise use mock data
       return mockDelay(mockIntervention);
     }
 
@@ -108,6 +117,65 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching intervention:', error);
+      throw error;
+    }
+  },
+
+  // 6. POST /interventions/execute - Execute an intervention action
+  executeIntervention: async (customerId, interventionData) => {
+    if (USE_MOCK_DATA) {
+      console.log('✅ Executing intervention for:', customerId, interventionData);
+      // In mock mode, just log to localStorage
+      const executedInterventions = JSON.parse(localStorage.getItem('executed_interventions') || '[]');
+      const execution = {
+        customer_id: customerId,
+        intervention: interventionData,
+        executed_at: new Date().toISOString(),
+        status: 'sent'
+      };
+      executedInterventions.push(execution);
+      localStorage.setItem('executed_interventions', JSON.stringify(executedInterventions));
+
+      return mockDelay({
+        success: true,
+        message: 'Intervention executed successfully',
+        execution_id: `EXE-${Date.now()}`,
+        ...execution
+      });
+    }
+
+    try {
+      const response = await api.post('/interventions/execute', {
+        customer_id: customerId,
+        intervention: interventionData
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error executing intervention:', error);
+      throw error;
+    }
+  },
+
+  // 7. GET /interventions/history - Get intervention history
+  getInterventionHistory: async (customerId = null) => {
+    if (USE_MOCK_DATA) {
+      console.log('📜 Fetching intervention history');
+      const history = JSON.parse(localStorage.getItem('executed_interventions') || '[]');
+
+      if (customerId) {
+        return mockDelay(history.filter(i => i.customer_id === customerId));
+      }
+      return mockDelay(history);
+    }
+
+    try {
+      const url = customerId
+        ? `/interventions/history?customer_id=${customerId}`
+        : '/interventions/history';
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching intervention history:', error);
       throw error;
     }
   },

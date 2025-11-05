@@ -5,6 +5,7 @@ import KPICards from './components/KPICards';
 import ChurnTable from './components/ChurnTable';
 import SegmentChart from './components/SegmentChart';
 import CustomerModal from './components/CustomerModal';
+import InterventionHistory from './components/InterventionHistory';
 
 function App() {
   const [dashboardStats, setDashboardStats] = useState(null);
@@ -124,6 +125,11 @@ function App() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Intervention History */}
+        <div className="mb-6">
+          <InterventionHistory />
         </div>
 
         {/* At-Risk Customers Table */}
