@@ -208,7 +208,7 @@ const ChurnPrediction = () => {
                     <input
                       type={isNumberField ? 'number' : 'text'}
                       inputMode={isNumberField ? 'decimal' : undefined}
-                      step={field.type === 'float' ? '0.01' : field.type === 'integer' ? '1' : undefined}
+                      step={field.type === 'float' ? 'any' : field.type === 'integer' ? '1' : undefined}
                       name={field.name}
                       value={value}
                       onChange={handleChange}
