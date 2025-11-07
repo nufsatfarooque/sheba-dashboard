@@ -1,5 +1,14 @@
 # Intervention Recommendations Implementation Summary
 
+## Update — Manual Churn Prediction Page (2025-11-07)
+
+- Added `src/pages/ChurnPrediction.jsx`, a guided form for the FastAPI `CustomerInput` schema that renders churn probability, risk category, binary prediction, and SHAP top factors returned by `api_server.py`.
+- Split the legacy monolithic `App` component into routed pages: `src/pages/Dashboard.jsx` retains the existing KPI/segment experience and now includes a header button that links to the prediction form.
+- Introduced client-side routing with `react-router-dom` (see `App.js`) and added a back-to-dashboard control on the prediction page for quick navigation.
+- Extended `src/services/api.js` with `submitChurnPrediction(payload)` so the frontend can call `POST /predict/churn` directly, while preserving mock-mode fallbacks.
+- Installed `react-router-dom@^7.9.5`; run `npm install` (already executed) before `npm start` to ensure the dependency is available.
+- Known requirement: the churn FastAPI server from `churn_prediction/api_server.py` must be running locally (`uvicorn` default at `http://localhost:8000`) for live predictions; otherwise, enable mock mode via `REACT_APP_USE_MOCK=true`.
+
 ## What Was Built
 
 A complete **rules-based intervention recommendation system** that generates personalized retention actions for at-risk customers based on their churn risk and segment.
