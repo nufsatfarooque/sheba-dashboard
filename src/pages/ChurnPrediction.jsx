@@ -3,45 +3,52 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Loader2, Sparkles } from 'lucide-react';
 import apiService from '../services/api';
 
-const initialFormState = {
-  tenure: '',
-  citytier: '',
-  warehousetohome: '',
-  hourspendonapp: '',
-  numberofdeviceregistered: '',
-  satisfactionscore: '',
-  maritalstatus: 'Single',
-  numberofaddress: '',
-  orderamounthikefromlastyear: '',
-  couponused: '',
-  ordercount: '',
-  daysincelastorder: '',
-  cashbackamount: '',
-  gender: 'Female',
-  complain: '',
-  preferredlogindevice: '',
-  preferredpaymentmode: '',
-  preferedordercat: '',
-};
-
-const integerFields = [
-  'citytier',
-  'numberofdeviceregistered',
-  'satisfactionscore',
-  'numberofaddress',
-  'couponused',
-  'ordercount',
-  'complain',
+const fieldsConfig = [
+  { name: 'tenure', label: 'Customer Tenure (months)', type: 'float', required: true },
+  { name: 'citytier', label: 'City Tier', type: 'integer', required: true },
+  { name: 'warehousetohome', label: 'Distance from Warehouse (km)', type: 'float', required: true },
+  { name: 'hourspendonapp', label: 'Hours Spent on App (per week)', type: 'float', required: true },
+  { name: 'numberofdeviceregistered', label: 'Number of Devices Registered', type: 'integer', required: true },
+  { name: 'satisfactionscore', label: 'Satisfaction Score (1-5)', type: 'integer', required: true },
+  {
+    name: 'maritalstatus',
+    label: 'Marital Status',
+    type: 'select',
+    required: true,
+    options: ['Single', 'Married', 'Divorced', 'Widowed'],
+    defaultValue: 'Single',
+  },
+  { name: 'numberofaddress', label: 'Number of Saved Addresses', type: 'integer', required: true },
+  { name: 'orderamounthikefromlastyear', label: 'Order Amount Growth (year-over-year %)', type: 'float', required: true },
+  { name: 'couponused', label: 'Coupons Used (last 6 months)', type: 'integer', required: true },
+  { name: 'ordercount', label: 'Total Orders (lifetime)', type: 'integer', required: true },
+  { name: 'daysincelastorder', label: 'Days Since Last Order', type: 'float', required: true },
+  { name: 'cashbackamount', label: 'Cashback Amount Earned (Tk)', type: 'float', required: true },
+  {
+    name: 'gender',
+    label: 'Gender',
+    type: 'select',
+    required: true,
+    options: ['Female', 'Male', 'Other'],
+    defaultValue: 'Female',
+  },
+  { name: 'complain', label: 'Complaints Filed (count)', type: 'integer', required: true },
+  { name: 'preferredlogindevice', label: 'Preferred Login Device (optional)', type: 'text', required: false, placeholder: 'e.g., Mobile Phone' },
+  { name: 'preferredpaymentmode', label: 'Preferred Payment Mode (optional)', type: 'text', required: false, placeholder: 'e.g., Credit Card' },
+  { name: 'preferedordercat', label: 'Preferred Order Category (optional)', type: 'text', required: false, placeholder: 'e.g., Electronics' },
 ];
 
-const floatFields = [
-  'tenure',
-  'warehousetohome',
-  'hourspendonapp',
-  'orderamounthikefromlastyear',
-  'daysincelastorder',
-  'cashbackamount',
-];
+const initialFormState = fieldsConfig.reduce((acc, field) => {
+  if (field.type === 'select') {
+    acc[field.name] = field.required ? field.defaultValue ?? (field.options ? field.options[0] : '') : '';
+  } else {
+    acc[field.name] = '';
+  }
+  return acc;
+}, {});
+
+const integerFields = fieldsConfig.filter((field) => field.type === 'integer').map((field) => field.name);
+const floatFields = fieldsConfig.filter((field) => field.type === 'float').map((field) => field.name);
 
 const ChurnPrediction = () => {
   const navigate = useNavigate();
@@ -78,25 +85,18 @@ const ChurnPrediction = () => {
   };
 
   const validatePayload = (payload) => {
-    const requiredFields = [
-      'tenure',
-      'citytier',
-      'warehousetohome',
-      'hourspendonapp',
-      'numberofdeviceregistered',
-      'satisfactionscore',
-      'maritalstatus',
-      'numberofaddress',
-      'orderamounthikefromlastyear',
-      'couponused',
-      'ordercount',
-      'daysincelastorder',
-      'cashbackamount',
-      'gender',
-      'complain',
-    ];
+    const requiredFields = fieldsConfig.filter((field) => field.required).map((field) => field.name);
 
-    const missing = requiredFields.filter((field) => payload[field] === undefined || payload[field] === null || Number.isNaN(payload[field]));
+    const missing = requiredFields.filter((field) => {
+      const value = payload[field];
+      if (value === undefined || value === null || value === '') {
+        return true;
+      }
+      if (Number.isNaN(value)) {
+        return true;
+      }
+      return false;
+    });
 
     if (missing.length > 0) {
       return `Please fill all required fields (${missing.join(', ')}).`;
@@ -145,7 +145,7 @@ const ChurnPrediction = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
               <Sparkles size={26} className="text-blue-600" />
-              Manual Churn Prediction
+              Churn Prediction
             </h1>
             <p className="text-sm text-gray-500 mt-1">Submit customer attributes to get churn probability with SHAP explanations.</p>
           </div>
@@ -166,38 +166,32 @@ const ChurnPrediction = () => {
         <div className="grid lg:grid-cols-1 gap-8">
           <section className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-semibold mb-4">Customer Attributes</h2>
-            <p className="text-sm text-gray-500 mb-6">
-              Required fields match the FastAPI `CustomerInput` schema. Optional categorical overrides can be provided for device, payment mode, and order category.
-            </p>
+
 
             <form className="grid md:grid-cols-2 gap-4" onSubmit={handleSubmit}>
-              {Object.entries(formData).map(([field, value]) => {
-                const isOptional = ['preferredlogindevice', 'preferredpaymentmode', 'preferedordercat'].includes(field);
-                const label = field
-                  .replace(/([a-z])([A-Z])/g, '$1 $2')
-                  .replace(/_/g, ' ')
-                  .replace(/\b\w/g, (char) => char.toUpperCase());
+              {fieldsConfig.map((field) => {
+                const value = formData[field.name];
+                const isNumberField = field.type === 'integer' || field.type === 'float';
+                const isSelectField = field.type === 'select';
+                const isOptional = !field.required;
 
-                if (field === 'gender' || field === 'maritalstatus') {
-                  const options = field === 'gender'
-                    ? ['Female', 'Male', 'Other']
-                    : ['Single', 'Married', 'Divorced', 'Widowed'];
-
+                if (isSelectField) {
                   return (
-                    <label key={field} className="flex flex-col gap-2 text-sm text-gray-700">
+                    <label key={field.name} className="flex flex-col gap-2 text-sm text-gray-700">
                       <span className="font-medium">
-                        {label}
+                        {field.label}
                         {!isOptional && <span className="text-red-500"> *</span>}
                       </span>
                       <select
-                        name={field}
+                        name={field.name}
                         value={value}
                         onChange={handleChange}
                         className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        required={field.required}
                       >
-                        {options.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
+                        {(field.options || []).map((option) => (
+                          <option key={option || 'empty'} value={option}>
+                            {option || 'Not specified'}
                           </option>
                         ))}
                       </select>
@@ -205,25 +199,22 @@ const ChurnPrediction = () => {
                   );
                 }
 
-                const inputType = integerFields.includes(field) || floatFields.includes(field) ? 'number' : 'text';
-                const step = floatFields.includes(field) ? '0.01' : '1';
-
                 return (
-                  <label key={field} className="flex flex-col gap-2 text-sm text-gray-700">
+                  <label key={field.name} className="flex flex-col gap-2 text-sm text-gray-700">
                     <span className="font-medium">
-                      {label}
+                      {field.label}
                       {!isOptional && <span className="text-red-500"> *</span>}
                     </span>
                     <input
-                      type={inputType}
-                      inputMode={inputType === 'number' ? 'decimal' : undefined}
-                      step={inputType === 'number' ? step : undefined}
-                      name={field}
+                      type={isNumberField ? 'number' : 'text'}
+                      inputMode={isNumberField ? 'decimal' : undefined}
+                      step={field.type === 'float' ? '0.01' : field.type === 'integer' ? '1' : undefined}
+                      name={field.name}
                       value={value}
                       onChange={handleChange}
-                      placeholder={isOptional ? 'Optional' : ''}
+                      placeholder={field.placeholder || (isOptional ? 'Optional' : '')}
                       className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required={!isOptional}
+                      required={field.required}
                     />
                   </label>
                 );
