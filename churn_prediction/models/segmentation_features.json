@@ -1,0 +1,12 @@
+{
+  "features": [
+    "avg_spent",
+    "num_bookings",
+    "price_sensitivity_score",
+    "complaints_count",
+    "satisfaction_score",
+    "tenure",
+    "days_since_last_order",
+    "order_growth"
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "Occasional": {
+    "cluster_id": 3,
+    "count": 4169,
+    "percentage": 41.7,
+    "characteristics": {
+      "avg_spent": 14.47,
+      "num_bookings": 5.64,
+      "price_sensitivity_score": 0.325,
+      "complaints_count": 0.0,
+      "satisfaction_score": 3.6,
+      "tenure": 8.16,
+      "days_since_last_order": 20.32,
+      "order_growth": 16.5
+    },
+    "description": "Infrequent users with sporadic booking patterns. Potential for reactivation campaigns.",
+    "color": "#FCD34D"
+  },
+  "Loyal": {
+    "cluster_id": 0,
+    "count": 1100,
+    "percentage": 11.0,
+    "characteristics": {
+      "avg_spent": 16.17,
+      "num_bookings": 5.17,
+      "price_sensitivity_score": 0.374,
+      "complaints_count": 0.26,
+      "satisfaction_score": 3.62,
+      "tenure": 38.15,
+      "days_since_last_order": 26.56,
+      "order_growth": 13.45
+    },
+    "description": "Long-term customers with consistent booking patterns and high retention. Low churn risk.",
+    "color": "#8B5CF6"
+  },
+  "Price-Sensitive": {
+    "cluster_id": 2,
+    "count": 2580,
+    "percentage": 25.8,
+    "characteristics": {
+      "avg_spent": 34.15,
+      "num_bookings": 3.59,
+      "price_sensitivity_score": 0.758,
+      "complaints_count": 0.27,
+      "satisfaction_score": 3.62,
+      "tenure": 10.16,
+      "days_since_last_order": 55.13,
+      "order_growth": 12.65
+    },
+    "description": "Customers who are highly responsive to discounts, coupons, and cashback offers. Focus on value and pricing.",
+    "color": "#3B82F6"
+  },
+  "High-Value": {
+    "cluster_id": 1,
+    "count": 2151,
+    "percentage": 21.5,
+    "characteristics": {
+      "avg_spent": 15.52,
+      "num_bookings": 5.4,
+      "price_sensitivity_score": 0.357,
+      "complaints_count": 1.47,
+      "satisfaction_score": 3.55,
+      "tenure": 9.12,
+      "days_since_last_order": 23.19,
+      "order_growth": 14.87
+    },
+    "description": "Premium customers with high spending and frequent bookings. Highest lifetime value and engagement.",
+    "color": "#10B981"
+  }
+}

@@ -3,7 +3,10 @@ import {
   mockDashboardStats,
   mockAtRiskCustomers,
   mockChurnPrediction,
-  mockIntervention
+  mockIntervention,
+  mockSegmentList,
+  mockSegmentDetails,
+  mockSegmentCustomers
 } from './mockData';
 import { generateInterventionRecommendation } from './interventionEngine';
 
@@ -214,6 +217,86 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching intervention history:', error);
+      throw error;
+    }
+  },
+
+  // ==================== SEGMENTATION ENDPOINTS ====================
+
+  // 8. GET /api/segments - Get all segments
+  getAllSegments: async () => {
+    if (USE_MOCK_DATA) {
+      console.log('🔧 Using mock segment list');
+      return mockDelay(mockSegmentList);
+    }
+
+    try {
+      const response = await api.get('/api/segments');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching segments:', error);
+      throw error;
+    }
+  },
+
+  // 9. GET /api/segments/{name} - Get segment details
+  getSegmentDetails: async (segmentName) => {
+    if (USE_MOCK_DATA) {
+      console.log('🔧 Using mock segment details for:', segmentName);
+      const details = mockSegmentDetails[segmentName];
+      if (!details) {
+        throw new Error(`Segment ${segmentName} not found`);
+      }
+      return mockDelay(details);
+    }
+
+    try {
+      const response = await api.get(`/api/segments/${encodeURIComponent(segmentName)}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching segment details:', error);
+      throw error;
+    }
+  },
+
+  // 10. GET /api/segments/{name}/customers - Get customers in segment
+  getSegmentCustomers: async (segmentName, limit = 50, offset = 0) => {
+    if (USE_MOCK_DATA) {
+      console.log('🔧 Using mock segment customers for:', segmentName);
+      const customers = mockSegmentCustomers[segmentName];
+      if (!customers) {
+        throw new Error(`Customers for segment ${segmentName} not found`);
+      }
+      return mockDelay(customers);
+    }
+
+    try {
+      const response = await api.get(
+        `/api/segments/${encodeURIComponent(segmentName)}/customers?limit=${limit}&offset=${offset}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching segment customers:', error);
+      throw error;
+    }
+  },
+
+  // 11. POST /api/segments/recalculate - Trigger re-segmentation
+  recalculateSegments: async () => {
+    if (USE_MOCK_DATA) {
+      console.log('🔧 Mock: Triggering segment recalculation');
+      return mockDelay({
+        status: 'success',
+        message: 'Segmentation recalculation queued (mock mode)',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    try {
+      const response = await api.post('/api/segments/recalculate');
+      return response.data;
+    } catch (error) {
+      console.error('Error recalculating segments:', error);
       throw error;
     }
   },

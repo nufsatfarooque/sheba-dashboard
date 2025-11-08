@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Brain } from 'lucide-react';
+import { RefreshCw, Brain, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiService from '../services/api';
 import KPICards from '../components/KPICards';
@@ -26,11 +26,29 @@ const Dashboard = () => {
       setLoading(true);
       setError(null);
 
-      const stats = await apiService.getDashboardStats();
-      setDashboardStats(stats);
+      // Fetch segment data from the real API
+      const segmentData = await apiService.getAllSegments();
 
-      const atRisk = await apiService.getAtRiskCustomers(50);
-      setAtRiskCustomers(atRisk.customers);
+      // Transform segment data for dashboard display
+      const transformedStats = {
+        total_customers: segmentData.total_customers || 0,
+        segment_distribution: segmentData.segments || {},
+        at_risk_count: 0, // TODO: Implement when backend endpoint is available
+        critical_risk_count: 0,
+        retention_rate: 0,
+        avg_churn_probability: 0,
+        risk_distribution: {
+          Low: 0,
+          Medium: 0,
+          High: 0,
+          Critical: 0
+        }
+      };
+
+      setDashboardStats(transformedStats);
+
+      // TODO: Fetch at-risk customers when backend endpoint is available
+      setAtRiskCustomers([]);
     } catch (err) {
       setError('Failed to load dashboard data. Please check if the backend is running.');
       console.error('Dashboard error:', err);
@@ -93,6 +111,13 @@ const Dashboard = () => {
               <p className="text-sm text-gray-500 mt-1">Customer Churn Prevention Dashboard</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => navigate('/segments')}
+                className="flex items-center justify-center gap-2 border border-purple-600 text-purple-600 px-4 py-2 rounded-lg hover:bg-purple-50"
+              >
+                <Users size={18} />
+                Segments
+              </button>
               <button
                 onClick={() => navigate('/predict')}
                 className="flex items-center justify-center gap-2 border border-blue-600 text-blue-600 px-4 py-2 rounded-lg hover:bg-blue-50"
