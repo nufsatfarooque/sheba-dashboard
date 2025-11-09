@@ -3,18 +3,30 @@ import {
   mockDashboardStats,
   mockAtRiskCustomers,
   mockChurnPrediction,
-  mockIntervention
+  mockIntervention,
+  mockSegmentList,
+  mockSegmentDetails,
+  mockSegmentCustomers
 } from './mockData';
 import { generateInterventionRecommendation } from './interventionEngine';
 
-// 🔌 PLACEHOLDER: Backend API base URL
+// Backend API base URLs
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const CHURN_API_BASE_URL = process.env.REACT_APP_CHURN_API_URL || 'http://localhost:8000';
+const PREDICTION_USE_MOCK = process.env.REACT_APP_PREDICTION_USE_MOCK === 'true';
+
+const normalizeBaseUrl = (url) => {
+  if (!url) {
+    return '';
+  }
+  return url.endsWith('/') ? url.slice(0, -1) : url;
+};
 
 // Toggle this to use mock data when backend is not available
 const USE_MOCK_DATA = process.env.REACT_APP_USE_MOCK === 'true';
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: normalizeBaseUrl(API_BASE_URL),
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -75,6 +87,35 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching churn prediction:', error);
+      throw error;
+    }
+  },
+
+  submitChurnPrediction: async (customerPayload) => {
+    if (PREDICTION_USE_MOCK) {
+      console.log('🔧 Using mock churn prediction payload submission');
+      const enrichedFactors = (mockChurnPrediction.top_factors || []).map((factor) => ({
+        ...factor,
+        readable_name: factor.feature.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()),
+      }));
+
+      return mockDelay({
+        ...mockChurnPrediction,
+        prediction: mockChurnPrediction.prediction ?? 1,
+        top_factors: enrichedFactors,
+      });
+    }
+
+    try {
+      const baseUrl = normalizeBaseUrl(CHURN_API_BASE_URL);
+      const response = await axios.post(`${baseUrl}/predict/churn`, customerPayload, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error submitting churn prediction payload:', error);
       throw error;
     }
   },
@@ -176,6 +217,86 @@ export const apiService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching intervention history:', error);
+      throw error;
+    }
+  },
+
+  // ==================== SEGMENTATION ENDPOINTS ====================
+
+  // 8. GET /api/segments - Get all segments
+  getAllSegments: async () => {
+    if (USE_MOCK_DATA) {
+      console.log('🔧 Using mock segment list');
+      return mockDelay(mockSegmentList);
+    }
+
+    try {
+      const response = await api.get('/api/segments');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching segments:', error);
+      throw error;
+    }
+  },
+
+  // 9. GET /api/segments/{name} - Get segment details
+  getSegmentDetails: async (segmentName) => {
+    if (USE_MOCK_DATA) {
+      console.log('🔧 Using mock segment details for:', segmentName);
+      const details = mockSegmentDetails[segmentName];
+      if (!details) {
+        throw new Error(`Segment ${segmentName} not found`);
+      }
+      return mockDelay(details);
+    }
+
+    try {
+      const response = await api.get(`/api/segments/${encodeURIComponent(segmentName)}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching segment details:', error);
+      throw error;
+    }
+  },
+
+  // 10. GET /api/segments/{name}/customers - Get customers in segment
+  getSegmentCustomers: async (segmentName, limit = 50, offset = 0) => {
+    if (USE_MOCK_DATA) {
+      console.log('🔧 Using mock segment customers for:', segmentName);
+      const customers = mockSegmentCustomers[segmentName];
+      if (!customers) {
+        throw new Error(`Customers for segment ${segmentName} not found`);
+      }
+      return mockDelay(customers);
+    }
+
+    try {
+      const response = await api.get(
+        `/api/segments/${encodeURIComponent(segmentName)}/customers?limit=${limit}&offset=${offset}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching segment customers:', error);
+      throw error;
+    }
+  },
+
+  // 11. POST /api/segments/recalculate - Trigger re-segmentation
+  recalculateSegments: async () => {
+    if (USE_MOCK_DATA) {
+      console.log('🔧 Mock: Triggering segment recalculation');
+      return mockDelay({
+        status: 'success',
+        message: 'Segmentation recalculation queued (mock mode)',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    try {
+      const response = await api.post('/api/segments/recalculate');
+      return response.data;
+    } catch (error) {
+      console.error('Error recalculating segments:', error);
       throw error;
     }
   },
